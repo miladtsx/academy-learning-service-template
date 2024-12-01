@@ -31,8 +31,8 @@ protocols:
 skills:
 - valory/abstract_abci:0.1.0:bafybeihu2bcgjk2tqjiq2zhk3uogtfszqn4osvdt7ho3fubdpdj4jgdfjm
 - valory/abstract_round_abci:0.1.0:bafybeibovsktd3uxur45nrcomq5shcn46cgxd5idmhxbmjhg32c5abyqim
-- valory/learning_abci:0.1.0:bafybeics2eywsq54efsjf6f7cntvt3mlf6cjwuwoptuepfq4vvdovhxs7e
-- valory/learning_chained_abci:0.1.0:bafybeihjlm5wvlcrrupapxkhpuj6dfydn72usvb5nq6ipkw4n26zbr3hlq
+- valory/learning_abci:0.1.0:bafybeihyx2rqhjtdxpwtlfoltmrsappwrcm4gtnoxt43pkyfgjswbkyi2m
+- valory/learning_chained_abci:0.1.0:bafybeigd7i5pq5b2bcm4hy7o3h7h2ybgcdrtm7uf3kf7njy76lsddbn5ai
 - valory/registration_abci:0.1.0:bafybeicnth5q4httefsusywx3zrrq4al47owvge72dqf2fziruicq6hqta
 - valory/reset_pause_abci:0.1.0:bafybeievjciqdvxhqxfjd4whqs27h6qbxqzrae7wwj7fpvxlvmtw3x35im
 - valory/termination_abci:0.1.0:bafybeid54buqxipiuduw7b6nnliiwsxajnltseuroad53wukfonpxca2om
@@ -120,7 +120,7 @@ type: skill
 models:
   benchmark_tool:
     args:
-      log_dir: ${str:/logs}
+      log_dir: ${str:/tmp/logs}
   params:
     args:
       cleanup_history_depth: 1
@@ -188,3 +188,17 @@ models:
       default_chain_id: ${str:gnosis}
       termination_from_block: ${int:34088325}
       transfer_target_address: ${str:0x615d3278680337e2D39C3bc5042D959C7938B917}
+  coingecko_specs:
+    args:
+      api_id: coingecko
+      headers:
+        Accept: application/json
+      method: GET
+      parameters:
+        ids: autonolas
+        vs_currencies: eth
+        x_cg_demo_api_key: ${str:null}
+      response_key: autonolas
+      response_type: dict
+      retries: 5
+      url: https://api.coingecko.com/api/v3/simple/price
