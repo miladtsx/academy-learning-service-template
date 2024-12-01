@@ -20,7 +20,7 @@
 """This module contains the shared state for the abci skill of LearningAbciApp."""
 
 from typing import Any
-
+from packages.valory.skills.abstract_round_abci.models import ApiSpecs, BaseParams
 from packages.valory.skills.abstract_round_abci.models import BaseParams
 from packages.valory.skills.abstract_round_abci.models import (
     BenchmarkTool as BaseBenchmarkTool,
@@ -55,3 +55,6 @@ class Params(BaseParams):
             "transfer_target_address", kwargs, str
         )
         super().__init__(*args, **kwargs)
+
+class CoingeckoSpecs(ApiSpecs):
+    """A model that wraps ApiSpecs for Coingecko Simple Price API."""

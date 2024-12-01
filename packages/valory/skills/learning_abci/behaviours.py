@@ -20,14 +20,17 @@
 """This package contains round behaviours of LearningAbciApp."""
 
 from abc import ABC
-from typing import Generator, Set, Type, cast
+from typing import Generator, Optional, Set, Type, cast
 
 from packages.valory.skills.abstract_round_abci.base import AbstractRound
 from packages.valory.skills.abstract_round_abci.behaviours import (
     AbstractRoundBehaviour,
     BaseBehaviour,
 )
-from packages.valory.skills.learning_abci.models import Params, SharedState
+from packages.valory.skills.learning_abci.models import (
+    CoingeckoSpecs, 
+    Params, SharedState
+)
 from packages.valory.skills.learning_abci.payloads import (
     APICheckPayload,
     DecisionMakingPayload,
@@ -68,6 +71,11 @@ class LearningBaseBehaviour(BaseBehaviour, ABC):  # pylint: disable=too-many-anc
     def local_state(self) -> SharedState:
         """Return the state."""
         return cast(SharedState, self.context.state)
+    
+    @property
+    def coingecko_specs(self) -> CoingeckoSpecs:
+        """Get the Coingecko api specs."""
+        return self.context.coingecko_specs
 
 
 class APICheckBehaviour(LearningBaseBehaviour):  # pylint: disable=too-many-ancestors
@@ -94,9 +102,26 @@ class APICheckBehaviour(LearningBaseBehaviour):  # pylint: disable=too-many-ance
         """Get token price from Coingecko"""
         # Interact with Coingecko's API
         # result = yield from self.get_http_response("coingecko.com")
-        yield
-        price = 1.0
-        self.context.logger.info(f"Price is {price}")
+        
+        price = yield from self.get_token_price_specs()
+        self.context.logger.info(f"Price is {price} ETH")
+        return price
+
+    def get_token_price_specs(self) -> Generator[None, None, Optional[float]] :
+        """Get token price in ETH from Coingecko using ApiSpecs"""
+
+        # Get the specs
+        specs = self.coingecko_specs.get_spec()
+
+        # Make the call
+        raw_response = yield from self.get_http_response(**specs)
+
+        # Process the response
+        response = self.coingecko_specs.process_response(raw_response)
+
+        # Get the price in ETH
+        price = response.get("eth", None)
+        self.context.logger.info(f"Got token price from Coingecko: {price} ETH")
         return price
 
     def get_balance(self):

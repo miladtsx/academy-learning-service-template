@@ -7,11 +7,11 @@ license: Apache-2.0
 aea_version: '>=1.0.0, <2.0.0'
 fingerprint:
   __init__.py: bafybeiho3lkochqpmes4f235chq26oggmwnol3vjuvhosleoubbjirbwaq
-  behaviours.py: bafybeifam2j6avqkqgnftylektkgfr44bx64svt46n5orfdce6u5v2hck4
+  behaviours.py: bafybeicx2k22bxyyv7sbcnh34seszkpy2ommi5kxqyfx3ldbnbvbdgd5cu
   dialogues.py: bafybeifqjbumctlffx2xvpga2kcenezhe47qhksvgmaylyp5ypwqgfar5u
   fsm_specification.yaml: bafybeicxvornc7gpvpotob6z46fl7qmataxydn22fr22qnb4ausfg6vppe
   handlers.py: bafybeigjadr4thz6hfpfx5abezbwnqhbxmachf4efasrn4z2vqhsqgnyvi
-  models.py: bafybeiagzhv7jukillz5ta47pbpgu554t22uz35vsf7ez55vs7yu6f3bni
+  models.py: bafybeib5bxbzkqlxs7ik6yzjgbazldma6efkvfre5getw6djdzb6e7qi34
   payloads.py: bafybeicfc54bmgft2nlwpykcxaqvrbjrhcdkdck2xt2kyou6u6lczoorfu
   rounds.py: bafybeif73latxgwatmslh34mrt3hgs762bhcusf4dyilxigqxwfmoou3dm
 fingerprint_ignore_patterns: []
@@ -52,7 +52,7 @@ models:
     class_name: AbciDialogues
   benchmark_tool:
     args:
-      log_dir: /logs
+      log_dir: /tmp/logs
     class_name: BenchmarkTool
   contract_api_dialogues:
     args: {}
@@ -124,6 +124,21 @@ models:
       coingecko_api_key: null
       transfer_target_address: '0x0000000000000000000000000000000000000000'
     class_name: Params
+  coingecko_specs:
+    args:
+      api_id: coingecko
+      headers:
+        Accept: application/json
+      method: GET
+      parameters:
+        ids: autonolas
+        vs_currencies: eth
+        x_cg_demo_api_key: null
+      response_key: autonolas
+      response_type: dict
+      retries: 5
+      url: https://api.coingecko.com/api/v3/simple/price
+    class_name: CoingeckoSpecs
   requests:
     args: {}
     class_name: Requests
