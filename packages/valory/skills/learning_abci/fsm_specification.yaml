@@ -13,14 +13,18 @@ start_states:
 - APICheckRound
 states:
 - APICheckRound
+- RetrieveIPFS
 - DecisionMakingRound
 - FinishedDecisionMakingRound
 - FinishedTxPreparationRound
 - TxPreparationRound
 transition_func:
-    (APICheckRound, DONE): DecisionMakingRound
+    (APICheckRound, DONE): RetrieveIPFS
     (APICheckRound, NO_MAJORITY): APICheckRound
     (APICheckRound, ROUND_TIMEOUT): APICheckRound
+    (RetrieveIPFS, DONE): DecisionMakingRound
+    (RetrieveIPFS, NO_MAJORITY): APICheckRound
+    (RetrieveIPFS, ROUND_TIMEOUT): RetrieveIPFS
     (DecisionMakingRound, DONE): FinishedDecisionMakingRound
     (DecisionMakingRound, ERROR): FinishedDecisionMakingRound
     (DecisionMakingRound, NO_MAJORITY): DecisionMakingRound

@@ -36,6 +36,7 @@ from packages.valory.skills.abstract_round_abci.base import (
 )
 from packages.valory.skills.learning_abci.payloads import (
     APICheckPayload,
+    IPFSPayload,
     DecisionMakingPayload,
     TxPreparationPayload,
 )
@@ -72,6 +73,11 @@ class SynchronizedData(BaseSynchronizedData):
     def balance(self) -> Optional[float]:
         """Get the token balance."""
         return self.db.get("balance", None)
+    
+    @property
+    def cid(self) -> Optional[str]:
+        """Get the price CID (Price is stored on IPFS)"""
+        return self.db.get("cid", None)
 
     @property
     def participant_to_price_round(self) -> DeserializedCollection:
@@ -93,6 +99,16 @@ class SynchronizedData(BaseSynchronizedData):
         """Get the round that submitted a tx to transaction_settlement_abci."""
         return str(self.db.get_strict("tx_submitter"))
 
+    @property
+    def participant_to_ipfs_round(self) -> DeserializedCollection:
+        """Get the participants to the ipfs round"""
+        return self._get_deserialized("participant_to_ipfs_round")
+
+    @property
+    def is_price_valid(self) -> Optional[str]:
+        """Make sure the Price is stored on the IPFS is greater than 1"""
+        return self.db.get("is_price_valid", None)
+
 
 class APICheckRound(CollectSameUntilThresholdRound):
     """APICheckRound"""
@@ -105,10 +121,23 @@ class APICheckRound(CollectSameUntilThresholdRound):
     selection_key = (
         get_name(SynchronizedData.price),
         get_name(SynchronizedData.balance),
+        get_name(SynchronizedData.cid),
     )
 
     # Event.ROUND_TIMEOUT  # this needs to be referenced for static checkers
 
+class IPFSRound(CollectSameUntilThresholdRound):
+    """IPFSRound"""
+
+    payload_class = IPFSPayload
+    synchronized_data_class = SynchronizedData
+    done_event = Event.DONE
+    no_majority_event = Event.NO_MAJORITY
+
+    collection_key = get_name(SynchronizedData.participant_to_ipfs_round)
+    selection_key = (
+        get_name(SynchronizedData.is_price_valid)
+    )
 
 class DecisionMakingRound(CollectSameUntilThresholdRound):
     """DecisionMakingRound"""
@@ -168,7 +197,12 @@ class LearningAbciApp(AbciApp[Event]):
         APICheckRound: {
             Event.NO_MAJORITY: APICheckRound,
             Event.ROUND_TIMEOUT: APICheckRound,
-            Event.DONE: DecisionMakingRound,
+            Event.DONE: IPFSRound,
+        },
+        IPFSRound: {
+            Event.NO_MAJORITY: APICheckRound,
+            Event.ROUND_TIMEOUT: IPFSRound,
+            Event.DONE: DecisionMakingRound
         },
         DecisionMakingRound: {
             Event.NO_MAJORITY: DecisionMakingRound,

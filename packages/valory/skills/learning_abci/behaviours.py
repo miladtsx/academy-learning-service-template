@@ -20,6 +20,8 @@
 """This package contains round behaviours of LearningAbciApp."""
 
 from abc import ABC
+from pathlib import Path
+from tempfile import mkdtemp
 from typing import Generator, Optional, Set, Type, cast
 
 from packages.valory.skills.abstract_round_abci.base import AbstractRound
@@ -27,12 +29,14 @@ from packages.valory.skills.abstract_round_abci.behaviours import (
     AbstractRoundBehaviour,
     BaseBehaviour,
 )
+from packages.valory.skills.abstract_round_abci.io_.store import SupportedFiletype
 from packages.valory.skills.learning_abci.models import (
     CoingeckoSpecs, 
     Params, SharedState
 )
 from packages.valory.skills.learning_abci.payloads import (
     APICheckPayload,
+    IPFSPayload,
     DecisionMakingPayload,
     TxPreparationPayload,
 )
@@ -40,6 +44,7 @@ from packages.valory.skills.learning_abci.rounds import (
     APICheckRound,
     DecisionMakingRound,
     Event,
+    IPFSRound,
     LearningAbciApp,
     SynchronizedData,
     TxPreparationRound,
@@ -52,7 +57,7 @@ TX_DATA = b"0x"
 SAFE_GAS = 0
 VALUE_KEY = "value"
 TO_ADDRESS_KEY = "to_address"
-
+METADATA_FILENAME = "metadata.json"
 
 class LearningBaseBehaviour(BaseBehaviour, ABC):  # pylint: disable=too-many-ancestors
     """Base behaviour for the learning_abci skill."""
@@ -77,6 +82,11 @@ class LearningBaseBehaviour(BaseBehaviour, ABC):  # pylint: disable=too-many-anc
         """Get the Coingecko api specs."""
         return self.context.coingecko_specs
 
+    @property
+    def metadata_filepath(self) -> str:
+        """Get the temporary filepath to the metadata."""
+        return str(Path(mkdtemp()) / METADATA_FILENAME)
+
 
 class APICheckBehaviour(LearningBaseBehaviour):  # pylint: disable=too-many-ancestors
     """APICheckBehaviour"""
@@ -89,8 +99,14 @@ class APICheckBehaviour(LearningBaseBehaviour):  # pylint: disable=too-many-ance
         with self.context.benchmark_tool.measure(self.behaviour_id).local():
             sender = self.context.agent_address
             price = yield from self.get_price()
+            ipfs_hash = yield from self.send_price_to_ipfs(price)
             balance = yield from self.get_balance()
-            payload = APICheckPayload(sender=sender, price=price, balance=balance)
+            payload = APICheckPayload(
+                sender=sender, 
+                price=price, 
+                balance=balance,
+                cid=ipfs_hash
+            )
 
         with self.context.benchmark_tool.measure(self.behaviour_id).consensus():
             yield from self.send_a2a_transaction(payload)
@@ -133,6 +149,55 @@ class APICheckBehaviour(LearningBaseBehaviour):  # pylint: disable=too-many-ance
         self.context.logger.info(f"Balance is {balance}")
         return balance
 
+    def send_price_to_ipfs(self, price) -> Generator[None, None, Optional[str]]:
+        """Store the token price in IPFS"""
+        data = {"price": price}
+        price_ipfs_hash = yield from self.send_to_ipfs(
+            filename=self.metadata_filepath, obj=data, filetype=SupportedFiletype.JSON
+        )
+        self.context.logger.info(
+            f"Price data stored in IPFS: https://gateway.autonolas.tech/ipfs/{price_ipfs_hash}"
+        )
+        return price_ipfs_hash
+
+
+class IPFSBehaviour(LearningBaseBehaviour):
+    """IPFSBehaviour: Retrieve the price from the IPFS"""
+
+    matching_round : Type[AbstractRound] = IPFSRound
+
+    def async_act(self) -> Generator:
+        """Action"""
+        
+        sender = self.context.agent_address
+        price = yield from self.get_price_from_ipfs()
+
+        price = price.get('price')
+
+        # MOCK logic
+        if(cast(float, price) > 0):
+            is_price_valid = True
+        else:
+            is_price_valid = False
+
+        payload = IPFSPayload(
+            sender=sender,
+            is_price_valid=is_price_valid
+        )
+
+        yield from self.send_a2a_transaction(payload)
+        yield from self.wait_until_round_end()
+        
+        self.set_done()
+
+    def get_price_from_ipfs(self) -> Generator[None, None, Optional[dict]]:
+        """Load the price data from IPFS"""
+        ipfs_hash = self.synchronized_data.cid
+        price = yield from self.get_from_ipfs(
+            ipfs_hash=ipfs_hash, filetype=SupportedFiletype.JSON
+        )
+        self.context.logger.error(f"Got price from IPFS: {price}")
+        return price
 
 class DecisionMakingBehaviour(
     LearningBaseBehaviour
@@ -202,6 +267,7 @@ class LearningRoundBehaviour(AbstractRoundBehaviour):
     abci_app_cls = LearningAbciApp  # type: ignore
     behaviours: Set[Type[BaseBehaviour]] = [  # type: ignore
         APICheckBehaviour,
+        IPFSBehaviour,
         DecisionMakingBehaviour,
         TxPreparationBehaviour,
     ]
