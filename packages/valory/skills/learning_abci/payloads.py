@@ -31,7 +31,7 @@ class APICheckPayload(BaseTxPayload):
 
     price: Optional[float]
     balance: Optional[float]
-
+    cid: Optional[str]
 
 @dataclass(frozen=True)
 class DecisionMakingPayload(BaseTxPayload):
@@ -46,3 +46,9 @@ class TxPreparationPayload(BaseTxPayload):
 
     tx_submitter: Optional[str] = None
     tx_hash: Optional[str] = None
+
+@dataclass(frozen=True)
+class IPFSPayload(BaseTxPayload):
+    """Represent a transaction payload for the IPFSRound."""
+
+    is_price_valid: Optional[bool]= None
